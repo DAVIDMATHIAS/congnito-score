@@ -28,5 +28,7 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-
-
+// Pass environment variables to the Spring Boot application
+tasks.named('bootRun') {
+    environment System.getenv()
+}
