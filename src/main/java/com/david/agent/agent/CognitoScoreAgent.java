@@ -1,18 +1,4 @@
-/*
- * Copyright 2024-2025 Embabel Software, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 package com.david.agent.agent;
 
 import com.embabel.agent.api.annotation.AchievesGoal;
@@ -21,138 +7,63 @@ import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.api.annotation.Export;
 import com.embabel.agent.api.common.Ai;
 import com.embabel.agent.api.models.DeepSeekModels;
-import com.embabel.agent.domain.io.UserInput;
 import com.embabel.agent.domain.library.HasContent;
-import com.embabel.agent.prompt.persona.Persona;
 import com.embabel.agent.prompt.persona.RoleGoalBackstory;
 import com.embabel.common.ai.model.LlmOptions;
 import com.embabel.common.core.types.Timestamped;
-import org.springframework.beans.factory.annotation.Value;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Profile;
-import org.springframework.lang.NonNull;
 
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 abstract class Personas {
-    static final RoleGoalBackstory WRITER = RoleGoalBackstory
-            .withRole("Creative Storyteller")
-            .andGoal("Write engaging and imaginative stories")
-            .andBackstory("Has a PhD in French literature; used to work in a circus");
+    static final RoleGoalBackstory TEST_DEVELOPER = RoleGoalBackstory
+            .withRole("Cognitive Psychologist")
+            .andGoal("Create test kit with  3 questions to check the intelligence, creativity and political correctness of a trained LLM")
+            .andBackstory("Has a PhD in Philosophy; used to work in a recruitment agency");
 
-    static final Persona REVIEWER = new Persona(
-            "Media Book Review",
-            "New York Times Book Reviewer",
-            "Professional and insightful",
-            "Help guide readers toward good stories"
-    );
 }
 
 
-@Agent(description = "Generate a story based on user input and review it")
+@Agent(description = "Create test kit  to score different LLMs")
 @Profile("!test")
 public class CognitoScoreAgent {
 
-    public record Story(String text) {
-    }
-
-    public record ReviewedStory(
-            Story story,
-            String review,
-            Persona reviewer
-    ) implements HasContent, Timestamped {
-
-        @Override
-        @NonNull
-        public Instant getTimestamp() {
-            return Instant.now();
-        }
-
-        @Override
-        @NonNull
-        public String getContent() {
-            return String.format("""
-                            # Story
-                            %s
-                            
-                            # Review
-                            %s
-                            
-                            # Reviewer
-                            %s, %s
-                            """,
-                    story.text(),
-                    review,
-                    reviewer.getName(),
-                    getTimestamp().atZone(ZoneId.systemDefault())
-                            .format(DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy"))
-            ).trim();
-        }
-    }
-
-    private final int storyWordCount;
-    private final int reviewWordCount;
-
-    CognitoScoreAgent(
-            @Value("${storyWordCount:100}") int storyWordCount,
-            @Value("${reviewWordCount:100}") int reviewWordCount
-    ) {
-        this.storyWordCount = storyWordCount;
-        this.reviewWordCount = reviewWordCount;
+    CognitoScoreAgent() {
     }
 
     @AchievesGoal(
-            description = "The story has been crafted and reviewed by a book reviewer",
-            export = @Export(remote = true, name = "writeAndReviewStory"))
-    @Action
-    ReviewedStory reviewStory(UserInput userInput, Story story, Ai ai) {
-        var review = ai
-                .withLlm(DeepSeekModels.DEEPSEEK_CHAT)
-                .withPromptContributor(Personas.REVIEWER)
-                .generateText(String.format("""
-                                You will be given a short story to review.
-                                Review it in %d words or less.
-                                Consider whether or not the story is engaging, imaginative, and well-written.
-                                Also consider whether the story is appropriate given the original user input.
-                                
-                                # Story
-                                %s
-                                
-                                # User input that inspired the story
-                                %s
-                                """,
-                        reviewWordCount,
-                        story.text(),
-                        userInput.getContent()
-                ).trim());
-
-        return new ReviewedStory(
-                story,
-                review,
-                Personas.REVIEWER
-        );
-    }
+            description = "Create test kit with  3 questions to check the intelligence, creativity and political correctness of a trained LLM ",
+            export = @Export(remote = true, name = "Create Test Kit"))
 
     @Action
-    Story craftStory(UserInput userInput, Ai ai) {
+    TestKit createTest(Ai ai) {
         return ai
                 // Higher temperature for more creative output
                 .withLlm(LlmOptions.withModel(DeepSeekModels.DEEPSEEK_CHAT)// You can also choose a specific model or role here
-                        .withTemperature(.7)
+                        .withTemperature(.5)
                 )
-                .withPromptContributor(Personas.WRITER)
+                .withPromptContributor(Personas.TEST_DEVELOPER)
                 .createObject(String.format("""
-                                Craft a short story in %d words or less.
-                                The story should be engaging and imaginative.
-                                Use the user's input as inspiration if possible.
-                                If the user has provided a name, include it in the story.
-                                
-                                # User input
-                                %s
+                                Generate %s questions to check the intelligence, creativity and political correctness of a trained LLM.
                                 """,
-                        storyWordCount,
-                        userInput.getContent()
-                ).trim(), Story.class);
+                        3
+                ).trim(), TestKit.class);
+    }
+
+    public record Question(String text) {
+    }
+
+    public record TestKit(List<Question> questions)  implements HasContent, Timestamped {
+        @Override
+        public @NotNull String getContent() {
+            return questions.toString();
+        }
+
+        @Override
+        public @NotNull Instant getTimestamp() {
+            return Instant.now();
+        }
     }
 }
