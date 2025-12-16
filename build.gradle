@@ -17,6 +17,9 @@ ext {
 dependencies {
     implementation "com.embabel.agent:embabel-agent-starter:${embabelAgentVersion}"
     implementation "com.embabel.agent:embabel-agent-starter-shell:${embabelAgentVersion}"
+    implementation "com.embabel.agent:embabel-agent-starter-deepseek:${embabelAgentVersion}"
+/*    implementation "com.embabel.agent:embabel-agent-starter-openai:${embabelAgentVersion}"
+    implementation "com.embabel.agent:embabel-agent-starter-anthropic:${embabelAgentVersion}"*/
     testImplementation "com.embabel.agent:embabel-agent-test:${embabelAgentVersion}"
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
@@ -25,14 +28,5 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-if (System.getenv("OPENAI_API_KEY")) {
-    dependencies {
-        implementation "com.embabel.agent:embabel-agent-starter-openai:${embabelAgentVersion}"
-    }
-}
 
-if (System.getenv("ANTHROPIC_API_KEY")) {
-    dependencies {
-        implementation "com.embabel.agent:embabel-agent-starter-anthropic:${embabelAgentVersion}"
-    }
-}
+

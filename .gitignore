@@ -1,11 +1,11 @@
-
+src/main/resources/application-local.yaml
 embabel-agent-api/src/main/resources/mcp/**
 /build/**
 /target/**
 */target/**
 */*/target/**
 */*/*/target/**
-
+/.gradle/**
 .idea/**
 
 .claude

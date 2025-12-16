@@ -20,6 +20,7 @@ import com.embabel.agent.api.annotation.Action;
 import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.api.annotation.Export;
 import com.embabel.agent.api.common.Ai;
+import com.embabel.agent.api.models.DeepSeekModels;
 import com.embabel.agent.domain.io.UserInput;
 import com.embabel.agent.domain.library.HasContent;
 import com.embabel.agent.prompt.persona.Persona;
@@ -107,7 +108,7 @@ public class WriteAndReviewAgent {
     @Action
     ReviewedStory reviewStory(UserInput userInput, Story story, Ai ai) {
         var review = ai
-                .withAutoLlm()
+                .withLlm(DeepSeekModels.DEEPSEEK_CHAT)
                 .withPromptContributor(Personas.REVIEWER)
                 .generateText(String.format("""
                                 You will be given a short story to review.
@@ -137,8 +138,7 @@ public class WriteAndReviewAgent {
     Story craftStory(UserInput userInput, Ai ai) {
         return ai
                 // Higher temperature for more creative output
-                .withLlm(LlmOptions
-                        .withAutoLlm() // You can also choose a specific model or role here
+                .withLlm(LlmOptions.withModel(DeepSeekModels.DEEPSEEK_CHAT)// You can also choose a specific model or role here
                         .withTemperature(.7)
                 )
                 .withPromptContributor(Personas.WRITER)
