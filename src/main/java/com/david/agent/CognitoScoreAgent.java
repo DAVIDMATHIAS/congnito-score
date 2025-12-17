@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.*;
 
 @Agent(description = "Create test kit  to score different LLMs")
 @Profile("!test")
@@ -40,17 +41,47 @@ public class CognitoScoreAgent {
         if (models == null || models.models().isEmpty()) {
             throw new RuntimeException("No models provided");
         }
-        List<ExamResponse> responses = new ArrayList<>();
-        for (String alias : models.models().keySet()) {
+        
+        // Create an executor service with a thread pool
+        int totalTasks = models.models().size() * testKit.questions().size();
+        ExecutorService executor = Executors.newFixedThreadPool(Math.min(totalTasks, 10));
+        List<Future<ExamResponse>> futures = new ArrayList<>();
+        
+        // Submit all tasks to the executor
+        for (String modelAlias : models.models().keySet()) {
             for (Question question : testKit.questions()) {
-                String response = ai
-                        .withLlm(models.models().get(alias))
-                        .withPromptContributor(Personas.EXAMINER)
-                        .createObject(question.text(), String.class);
-                ExamResponse examResponse = new ExamResponse(question.text(), response, alias);
-                responses.add(examResponse);
+                Future<ExamResponse> future = executor.submit(() -> {
+                    String response = ai
+                            .withLlm(models.models().get(modelAlias))
+                            .withPromptContributor(Personas.EXAMINER)
+                            .createObject(question.text(), String.class);
+                    return new ExamResponse(question.text(), response, modelAlias);
+                });
+                futures.add(future);
             }
         }
+        
+        // Collect all results
+        List<ExamResponse> responses = new ArrayList<>();
+        for (Future<ExamResponse> future : futures) {
+            try {
+                responses.add(future.get());
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException("Error executing test", e);
+            }
+        }
+        
+        // Shutdown the executor
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        
         EvaluationResult evaluationResult = ai.withLlm(DeepSeekModels.DEEPSEEK_CHAT).withPromptContributor(Personas.EVALUATOR).createObject(responses.toString(), EvaluationResult.class);
         return new FinalResult(evaluationResult, responses);
     }
