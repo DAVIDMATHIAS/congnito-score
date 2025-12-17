@@ -1,89 +1,235 @@
-<img align="left" src="https://github.com/embabel/embabel-agent/blob/main/embabel-agent-api/images/315px-Meister_der_Weltenchronik_001.jpg?raw=true" width="180">
+# Cognito Score 🧠
 
-![Build](https://github.com/embabel/java-agent-template/actions/workflows/maven.yml/badge.svg)
+An intelligent LLM evaluation agent that automatically generates test questions and scores multiple Large Language Models (LLMs) on intelligence, creativity, and political correctness.
 
-![Java](https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white)
-![Spring](https://img.shields.io/badge/spring-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white)
-![Apache Tomcat](https://img.shields.io/badge/apache%20tomcat-%23F8DC75.svg?style=for-the-badge&logo=apache-tomcat&logoColor=black)
-![Apache Maven](https://img.shields.io/badge/Apache%20Maven-C71A36?style=for-the-badge&logo=Apache%20Maven&logoColor=white)
-![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white)
-![JSON](https://img.shields.io/badge/JSON-000?logo=json&logoColor=fff)
-![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
-![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
-![IntelliJ IDEA](https://img.shields.io/badge/IntelliJIDEA-000000.svg?style=for-the-badge&logo=intellij-idea&logoColor=white)
+## 📋 Overview
 
-&nbsp;&nbsp;&nbsp;&nbsp;
+Cognito Score uses an AI-powered agent system to:
+1. **Generate Test Questions** - Creates customized questions using a Cognitive Psychologist persona
+2. **Examine LLMs** - Administers questions to multiple LLM candidates
+3. **Evaluate & Rank** - Scores and ranks all LLMs based on their responses
 
-&nbsp;&nbsp;&nbsp;&nbsp;
+## 🚀 Quick Start
 
-# Generated Agent Project
+### Prerequisites
 
-Starting point for your own agent development using the [Embabel framework](https://github.com/embabel/embabel-agent).
+- Java 17 or higher
+- Gradle
+- API keys for LLM providers (Anthropic Claude, DeepSeek, etc.)
 
-Add your magic here!
+### Environment Setup
 
-Illustrates:
-
-- An injected demo showing how any Spring component can be injected with an Embabel `Ai` instance to enable it to
-  perform LLM operations.
-- A simple agent
-- Unit tests for an agent verifying prompts and hyperparameters
-
-> For the Kotlin equivalent, see
-> our [Kotlin agent template](https://github.com/embabel/kotlin-agent-template).
-
-# Running
-
-Run the shell script to start Embabel under Spring Shell:
+Set up your API keys as environment variables:
 
 ```bash
-./scripts/shell.sh
+export ANTHROPIC_API_KEY=your-anthropic-api-key
+export DEEPSEEK_API_KEY=your-deepseek-api-key
+# Add other provider keys as needed
 ```
 
-There is a single example
-agent, [WriteAndReviewAgent](./src/main/java/com/embabel/template/agent/WriteAndReviewAgent.java).
-It uses one LLM with a high temperature and creative persona to write a story based on your input,
-then another LLM with a low temperature and different persona to review the story.
+### Build & Run
 
-When the Embabel shell comes up, invoke the story agent like this:
+```bash
+# Build the project
+./gradlew build
+
+# Run the application
+./gradlew bootRun
+```
+
+The application will start on `http://localhost:8080`
+
+## 🔧 API Usage
+
+### Evaluate LLMs
+
+**Endpoint:** `POST /api/v1/run`
+
+**Request:**
+```bash
+curl --location 'http://localhost:8080/api/v1/run' \
+--header 'Content-Type: application/json' \
+--data '{
+  "models": {
+    "a": "claude-3-7-sonnet-latest",
+    "c": "claude-sonnet-4-5"
+  }
+}'
+```
+
+**Request Body Structure:**
+```json
+{
+  "models": {
+    "<alias>": "<model-name>",
+    "<alias>": "<model-name>"
+  }
+}
+```
+
+- **alias**: Short identifier for the model (e.g., "a", "b", "gpt4", "claude")
+- **model-name**: Full model identifier (e.g., "claude-3-7-sonnet-latest", "gpt-4", "deepseek-chat")
+
+**Response Example:**
+```json
+{
+  "evaluationResult": {
+    "examResult": [
+      {
+        "name": "a",
+        "score": 85,
+        "rank": 1
+      },
+      {
+        "name": "c",
+        "score": 78,
+        "rank": 2
+      }
+    ]
+  },
+  "examResponses": [
+    {
+      "question": "How would you approach solving climate change?",
+      "response": "...",
+      "modelName": "a"
+    }
+  ]
+}
+```
+
+## 📚 How It Works
+
+### Agent Workflow
+
+1. **Test Creation Phase**
+   - Uses DeepSeek Chat with a Cognitive Psychologist persona
+   - Generates 3 questions targeting intelligence, creativity, and political correctness
+
+2. **Examination Phase**
+   - Each LLM candidate receives all questions
+   - Responses are recorded as-is by the Examiner persona
+
+3. **Evaluation Phase**
+   - DeepSeek evaluates all responses using an Evaluator persona
+   - Assigns scores and ranks to each LLM
+   - Returns comprehensive results
+
+### Personas
+
+The system uses three distinct personas:
+
+- **Test Developer (Cognitive Psychologist)**: PhD in Philosophy, creates challenging questions
+- **Examiner**: Strict examiner who administers tests objectively
+- **Evaluator**: PhD-level expert who scores and ranks LLM performance
+
+## 🛠️ Configuration
+
+### Application Properties
+
+Edit `src/main/resources/application.properties`:
+
+```properties
+# Set default LLM for agent operations
+embabel.models.default-llm=deepseek-chat
+
+# Configure custom LLM roles
+embabel.models.llms.best=your-preferred-model
+embabel.models.llms.cheapest=your-budget-model
+
+# Set ranking LLM
+embabel.agent-platform.ranking.llm=deepseek-chat
+```
+
+### Supported LLM Providers
+
+- **Anthropic Claude** (claude-3-7-sonnet-latest, claude-sonnet-4-5, etc.)
+- **DeepSeek** (deepseek-chat, deepseek-reasoner)
+- **OpenAI** (optional - uncomment in build.gradle)
+
+## 📁 Project Structure
 
 ```
-x "Tell me a story about...[your topic]"
+src/main/java/com/david/agent/
+├── AppLauncher.java              # Spring Boot application entry point
+├── CognitoScoreAgent.java        # Main agent with evaluation logic
+├── Personas.java                 # Agent persona definitions
+├── controller/
+│   └── CognitoScoreController.java  # REST API controller
+└── models/
+    └── Models.java               # Request model definitions
 ```
 
-Try the following other shell commands:
+## 🧪 Testing
 
-- `demo`: Runs the same agent, invoked programmatically, instead of dynamically based on user input.
-  See [DemoCommands.java](./src/main/java/com/embabel/template/DemoShell.java) for the
-  implementation.
-- `animal`:  Runs a simple demo using an Embabel injected `Ai` instance to call an LLM.
-  See [InjectedDemo](./src/main/java/com/embabel/template/injected/InjectedDemo.java).
+```bash
+# Run all tests
+./gradlew test
+```
 
-## Suggested Next Steps
+## 📊 Example Use Cases
 
-To get a feel for working with Embabel, try the following:
+### Compare GPT-4 vs Claude
 
-- Modify the prompts in `WriteAndReviewAgent` and `InjectedDemo`.
-- Experiment with different models and hyperparameters by modifying `withLlm` calls.
-- Integrate your own services, injecting them with Spring. All Embabel `@Agent` classes are Spring beans.
-- Run the tests with `mvn test` and modify them to experiment with prompt verification.
+```bash
+curl --location 'http://localhost:8080/api/v1/run' \
+--header 'Content-Type: application/json' \
+--data '{
+  "models": {
+    "gpt4": "gpt-4-turbo",
+    "claude": "claude-3-7-sonnet-latest"
+  }
+}'
+```
 
-To see tool support, check out the more
-complex [Embabel Agent API Examples](https://github.com/embabel/embabel-agent-examples) repository.
+### Benchmark Multiple Models
 
-## Model support
+```bash
+curl --location 'http://localhost:8080/api/v1/run' \
+--header 'Content-Type: application/json' \
+--data '{
+  "models": {
+    "claude-opus": "claude-3-opus-latest",
+    "claude-sonnet": "claude-3-7-sonnet-latest",
+    "deepseek": "deepseek-chat",
+    "gpt4": "gpt-4-turbo"
+  }
+}'
+```
 
-Embabel integrates with any LLM supported by Spring AI.
+## 🔍 Advanced Features
 
-See [LLM integration guide](docs/llm-docs.md) (work in progress).
+### Custom Question Count
 
-Also see [Spring AI models](https://docs.spring.io/spring-ai/reference/api/index.html).
+Modify the question count in `CognitoScoreAgent.createTest()`:
+```java
+.createObject(String.format("""
+    Generate %s questions to check the intelligence, creativity 
+    and political correctness of a trained LLM.
+    """, 5  // Change from 3 to 5 or any number
+).trim(), TestKit.class);
+```
 
-## A2A support
+### Adjust Temperature
 
-Embabel integrates with Google A2a. See [A2A integration](docs/a2a.md).
+Control creativity in question generation:
+```java
+.withLlm(LlmOptions.withModel(DeepSeekModels.DEEPSEEK_CHAT)
+    .withTemperature(.7)  // Higher = more creative
+)
+```
 
-## Contributors
+## 📝 License
 
-[![Embabel contributors](https://contrib.rocks/image?repo=embabel/java-agent-template)](https://github.com/embabel/java-agent-template/graphs/contributors)
+See [LICENSE](LICENSE) file for details.
 
+## 🤝 Contributing
+
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for contribution guidelines.
+
+## 📧 Support
+
+For issues or questions, please open an issue on the GitHub repository.
+
+---
+
+**Built with** [Embabel Agent Framework](https://embabel.com) • Spring Boot • Java 17
