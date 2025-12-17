@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Profile;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Agent(description = "Create test kit  to score different LLMs")
 @Profile("!test")
@@ -32,13 +33,13 @@ public class CognitoScoreAgent {
     @Action
     public EvaluationResult evaluateLLM(Ai ai, LLMCandidates llmCandidates, TestKit testKit) {
         List<ExamResponse> responses = new ArrayList<>();
-        for (String llmName : llmCandidates.llmNames()) {
+        for (String alias : llmCandidates.llmNames().keySet()) {
             for (Question question : testKit.questions()) {
                 String response = ai
-                        .withLlm(llmName)
+                        .withLlm(llmCandidates.llmNames.get(alias))
                         .withPromptContributor(Personas.EXAMINER)
                         .createObject(question.text(), String.class);
-                ExamResponse examResponse = new ExamResponse(question.text(), response, llmName);
+                ExamResponse examResponse = new ExamResponse(question.text(), response, alias);
                 responses.add(examResponse);
             }
         }
@@ -62,7 +63,7 @@ public class CognitoScoreAgent {
 
     @Action
     LLMCandidates candidates() {
-        List<String> llmNames = List.of(AnthropicModels.CLAUDE_35_HAIKU,AnthropicModels.CLAUDE_37_SONNET);
+        Map<String, String> llmNames = Map.of("A",AnthropicModels.CLAUDE_35_HAIKU,"B",AnthropicModels.CLAUDE_37_SONNET);
         return new LLMCandidates(llmNames);
     }
 
@@ -128,7 +129,7 @@ public class CognitoScoreAgent {
 
     public record LLMCandidates(
             @JsonPropertyDescription("List of LLM candidates")
-            List<String> llmNames
+            Map<String,String> llmNames
     ) {
     }
 }
