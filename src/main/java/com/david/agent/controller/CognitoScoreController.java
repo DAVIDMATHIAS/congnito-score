@@ -21,7 +21,6 @@ public class CognitoScoreController {
 
     @PostMapping("/api/v1/run")
     public CognitoScoreAgent.FinalResult runAgent(@RequestBody Models models) throws Exception {
-        String value = objectMapper.writeValueAsString(models);
-        return AgentInvocation.create(agentPlatform, CognitoScoreAgent.FinalResult.class).invoke(new UserInput(value));
+        return AgentInvocation.create(agentPlatform, CognitoScoreAgent.FinalResult.class).invoke(new UserInput("Evaluate LLM"), models);
     }
 }

@@ -6,7 +6,6 @@ import com.embabel.agent.api.annotation.Action;
 import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.api.annotation.Export;
 import com.embabel.agent.api.common.Ai;
-import com.embabel.agent.api.models.DeepSeekModels;
 import com.embabel.agent.domain.io.UserInput;
 import com.embabel.agent.domain.library.HasContent;
 import com.embabel.common.ai.model.LlmOptions;
@@ -20,6 +19,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.*;
 
 @Agent(description = "Create test kit  to score different LLMs")
 @Profile("!test")
@@ -31,41 +31,65 @@ public class CognitoScoreAgent {
     }
 
     @AchievesGoal(
-            description = "Evaluates all given LLM candiates and rank them",
-            export = @Export(remote = true, name = "LLM Evaluator"))
+            description = "Evaluates all given LLM candidates and rank them",
+            export = @Export(remote = true, name = "LLM Evaluator", startingInputTypes = Models.class))
 
     @Action
-    public FinalResult evaluateLLM(UserInput userInput, Ai ai, TestKit testKit) {
+    public FinalResult evaluateLLM(UserInput userInput, Ai ai, TestKit testKit, Models models) {
 
-        com.david.agent.models.Models models = null;
-        try {
-            models = objectMapper.readValue(userInput.getContent(), Models.class);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         if (models == null || models.models().isEmpty()) {
             throw new RuntimeException("No models provided");
         }
-        List<ExamResponse> responses = new ArrayList<>();
-        for (String alias : models.models().keySet()) {
+
+        // Create an executor service with a thread pool
+        int totalTasks = models.models().size() * testKit.questions().size();
+        ExecutorService executor = Executors.newFixedThreadPool(Math.min(totalTasks, 10));
+        List<Future<ExamResponse>> futures = new ArrayList<>();
+
+        // Submit all tasks to the executor
+        for (String modelAlias : models.models().keySet()) {
             for (Question question : testKit.questions()) {
-                String response = ai
-                        .withLlm(models.models().get(alias))
-                        .withPromptContributor(Personas.EXAMINER)
-                        .createObject(question.text(), String.class);
-                ExamResponse examResponse = new ExamResponse(question.text(), response, alias);
-                responses.add(examResponse);
+                Future<ExamResponse> future = executor.submit(() -> {
+                    String response = ai
+                            .withLlm(models.models().get(modelAlias))
+                            .withPromptContributor(Personas.EXAMINER)
+                            .createObject(question.text(), String.class);
+                    return new ExamResponse(question.text(), response, modelAlias);
+                });
+                futures.add(future);
             }
         }
-        EvaluationResult evaluationResult = ai.withLlm(DeepSeekModels.DEEPSEEK_CHAT).withPromptContributor(Personas.EVALUATOR).createObject(responses.toString(), EvaluationResult.class);
+
+        // Collect all results
+        List<ExamResponse> responses = new ArrayList<>();
+        for (Future<ExamResponse> future : futures) {
+            try {
+                responses.add(future.get());
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException("Error executing test", e);
+            }
+        }
+
+        // Shutdown the executor
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+
+        EvaluationResult evaluationResult = ai.withLlm(models.evaluatorModel()).withPromptContributor(Personas.EVALUATOR).createObject(responses.toString(), EvaluationResult.class);
         return new FinalResult(evaluationResult, responses);
     }
 
     @Action
-    TestKit createTest(Ai ai) {
+    TestKit createTest(Ai ai, Models models) {
         return ai
                 // Higher temperature for more creative output
-                .withLlm(LlmOptions.withModel(DeepSeekModels.DEEPSEEK_CHAT)// You can also choose a specific model or role here
+                .withLlm(LlmOptions.withModel(models.evaluatorModel())// You can also choose a specific model or role here
                         .withTemperature(.5)
                 )
                 .withPromptContributor(Personas.TEST_DEVELOPER)
