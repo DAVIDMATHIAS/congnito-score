@@ -13,7 +13,7 @@ Cognito Score uses an AI-powered agent system to:
 
 ### Prerequisites
 
-- Java 17 or higher
+- Java 21 or higher
 - Gradle
 - API keys for LLM providers (Anthropic Claude, DeepSeek, etc.)
 
