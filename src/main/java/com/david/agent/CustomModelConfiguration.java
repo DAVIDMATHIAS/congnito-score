@@ -45,10 +45,18 @@ public class CustomModelConfiguration {
         restClientBuilder = restClientBuilder.baseUrl(baseUrl);
         restClientBuilder = restClientBuilder.requestInterceptor((request, body, execution) -> {
             System.out.println("Here I am");
+            //Set Tachyon Headers here
             return execution.execute(request, body);
         });
 
-
+        // 2. Configure WebClient Builder with custom headers
+        webClientBuilder = webClientBuilder.baseUrl(baseUrl);
+        webClientBuilder = webClientBuilder.filter((request, next) -> {
+            System.out.println("Here I am at webclient builder");
+            //If RestClient is provided, this will not be used, if rest client is not provided,
+            //set Tachyon headers here
+            return next.exchange(request);
+        });
 
         ChatModel chatModel = getChatModel(restClientBuilder, webClientBuilder);
 
