@@ -21,10 +21,6 @@ public class GrokConfiguration extends OpenAiCompatibleModelFactory {
     }
 
     @Bean
-    Llm grok41fast() {
-        return openAiCompatibleLlm("grok-4-1-fast", PricingModel.getALL_YOU_CAN_EAT(), OpenAiModels.PROVIDER, LocalDate.of(2024, 10, 1), OpenAiChatOptionsConverter.INSTANCE, RetryUtils.DEFAULT_RETRY_TEMPLATE);
-    }
-    @Bean
     Llm grok41fast_reasoning() {
         return openAiCompatibleLlm("grok-4-1-fast-reasoning", PricingModel.getALL_YOU_CAN_EAT(), OpenAiModels.PROVIDER, LocalDate.of(2024, 10, 1), OpenAiChatOptionsConverter.INSTANCE, RetryUtils.DEFAULT_RETRY_TEMPLATE);
     }
